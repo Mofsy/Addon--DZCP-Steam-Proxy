@@ -1,0 +1,2 @@
+@php runner.php
+@pause

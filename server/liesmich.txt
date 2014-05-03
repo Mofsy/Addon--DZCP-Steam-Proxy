@@ -1,0 +1,132 @@
+#########################################
+
+       Steam Status Proxy Server
+
+#########################################
+
+Der Steam Status Proxy Server soll bei hohen Latenzen und Timeouts der Steam API 
+* http://api.steampowered.com & http://steamcommunity.com * für die Verfügbarkeit des Steam-Status sorgen.
+
+Dabei wird ein Conjob auf dem Server ausgeführt.
+Dieser Conjob aktualisiert die MySQL Datenbank und jeden Memcache Server, 
+es hält die aktuellen Statusinformationen der jeweiligen SteamIDs für einen Zugriff bereit.
+
+Die Installation des Server, erfordert die PDO-MySQL und die PHP Memcache Erweiterung.
+Sowie eine Performante MySQL Datenbank und einen oder mehrere Memcache Server mit ausreichend Arbeitsspeicher.
+
+#########################################
+
+
+        Installation Server:
+
+#########################################
+    1. Die config.php anpassen
+#########################################
+
+Die Datenbank und den Memcache Server eintragen.
+
+Ich empfehle die MariaDB und den Couchbase Server als Datenbank und Memcache.
+https://mariadb.org/ & http://www.couchbase.com/de
+
+
+#########################################
+  2. Alles auf eine Subdomain hochladen
+#########################################
+
+zbs.
+steamproxy.deinedomain.de etc.
+
+
+#########################################
+        3. Datenbank anlegen
+#########################################
+
+Eine neue Datenbank anlegen und die "database_install.sql" einspielen.
+
+#########################################
+        4. Conjob ausführen
+#########################################
+
+Die 'runner.php' mit der PHP Laufzeit ausführen, "php runner.php"
+Dabei handelt es ich um den Conjob dieser ist im Moment als Endlosschleife programmiert mit jeweiligen 15 Sekunden Pausen, kann aber leicht auf einen Conjob umgeschrieben werden.
+
+
+**************
+* Als Conjob *
+**************
+
+In der 'runner.php' die Zeilen entfernen oder auskommentieren:
+
+#########################################
+
+    if($sleep_api && $sleep_full) {
+	 sleep(15); // No Updates, Sleep
+    }
+
+
+#########################################
+
+Dann sollte "php runner.php" alle 15 bis 30 Sekunden ausgeführt werden.
+
+
+
+#########################################
+              5. Ausführen
+#########################################
+Wenn in der Konsole keine Fehler stehen:
+
+***************************************************************
+DZCP 1.6 Steam Status Proxy Server
+Fur PHP 5.4 > x86/x64 Version 1.0
+Powered by Hammermaps.de
+***************************************************************
+
+[00:00:00] Proxy Server started!
+
+#########################################
+* dann ist euer Proxy Server bereit.
+
+#########################################
+      6. Plugin ändern * Client *
+#########################################
+
+Damit jemand euren Proxy verwenden kann, muss in der Datei:
+"inc\additional-functions\dzcp_steamproxy.php" die Zeile:
+
+#########################################
+
+$proxy_servers = array(); //Servers
+$proxy_servers[] = array('host' => 'steamproxy.hammermaps.de', 'port' => 80);
+#$proxy_servers[] = array('host' => 'api.meinserver.de', 'port' => 80);
+
+#########################################
+
+geändert oder ergänzt werden.
+
+#########################################
+
+$proxy_servers = array(); //Servers
+$proxy_servers[] = array('host' => 'steamproxy.hammermaps.de', 'port' => 80);
+$proxy_servers[] = array('host' => steamproxy.deinedomain.de ', 'port' => 80);
+
+#########################################
+
+oder
+
+#########################################
+
+$proxy_servers = array(); //Servers
+$proxy_servers[] = array('host' => steamproxy.deinedomain.de ', 'port' => 80);
+
+#########################################
+
+#########################################
+    7. Client Plugin installieren
+#########################################
+
+Einfach die "dzcp_steamproxy.php" in den "inc/additional-functions" Ordner verschieben.
+
+Fertig!
+
+Hinweis:
+Der Proxy wird nur verwendet, wenn die DZCP 1.6 eigene Steam-API keine Verbindung oder Timeouts bekommt.
