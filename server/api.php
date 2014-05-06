@@ -63,6 +63,19 @@ function com_user($data_input=array()) {
             if($snoopy->fetch('http://steamcommunity.com/id/'.$data_input['steamid'].'/?xml=1')) {
                 if(!empty($snoopy->results)) {
                     $data = objectToArray(simplexml_load_string($snoopy->results, 'SimpleXMLElement', LIBXML_NOCDATA));
+                    if(array_key_exists('error',$data)) {
+                        if($snoopy->fetch('http://steamcommunity.com/profiles/'.$data_input['steamid'].'/?xml=1')) {
+                            if(!empty($snoopy->results)) {
+                                $data = objectToArray(simplexml_load_string($snoopy->results, 'SimpleXMLElement', LIBXML_NOCDATA));
+                            }
+                            else
+                                return array('status' => 'no_discover', 'data' => '');
+                        }
+                    }
+
+                    if(array_key_exists('error',$data))
+                        return array('status' => 'no_discover', 'data' => '');
+
                     Cache::set('user_'.$data_input['steamid'], base64_encode(serialize($data)),true,120); //Cache
 
                     $db->select("SELECT id FROM `steam_data` WHERE `steamid` = ?",array($data_input['steamid']));
@@ -73,10 +86,10 @@ function com_user($data_input=array()) {
                      return array('status' => 'available', 'data' => $data);
                 }
                 else
-                    return array('status' => 'no_discover', 'data' => '1');
+                    return array('status' => 'no_discover', 'data' => '');
             }
             else
-                return array('status' => 'no_discover', 'data' => '2');
+                return array('status' => 'no_discover', 'data' => '');
         }
     }
     else
@@ -102,6 +115,9 @@ function api_user($data_input=array()) {
                 if($snoopy->fetch('http://api.steampowered.com/'.$data_input['interface'].'/'.$data_input['method'].'/'.$data_input['version'].'/?'.http_build_query($send_data_api))) {
                     if(!empty($snoopy->results)) {
                         $data = objectToArray(simplexml_load_string($snoopy->results, 'SimpleXMLElement', LIBXML_NOCDATA));
+                        if(array_key_exists('error',$data) || !count($data['players']))
+                            return array('status' => 'no_discover', 'data' => '');
+
                         $data = $data['players']['player'];
 
                         //User im Memcache, aktualisieren
@@ -128,6 +144,9 @@ function api_user($data_input=array()) {
             if($snoopy->fetch('http://api.steampowered.com/'.$data_input['interface'].'/'.$data_input['method'].'/'.$data_input['version'].'/?'.http_build_query($send_data_api))) {
                 if(!empty($snoopy->results)) {
                     $data_api = objectToArray(simplexml_load_string($snoopy->results, 'SimpleXMLElement', LIBXML_NOCDATA));
+                    if(array_key_exists('error',$data_api) || !count($data_api['players']))
+                        return array('status' => 'no_discover', 'data' => '');
+
                     $data_api = $data_api['players']['player'];
 
                     //User im Memcache, aktualisieren

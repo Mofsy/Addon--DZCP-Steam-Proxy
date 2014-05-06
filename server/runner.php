@@ -62,7 +62,7 @@ while(true) {
     if($for_count >= 1) {
         $sleep_full = false;
         for ($i = 0; $i < $for_count; $i++) {
-            foreach($db->select_foreach('SELECT id,steamid FROM `steam_data` WHERE `time_data` <= '.time().' LIMIT '.($i*50).','.($pointer*50)) as $user) {
+            foreach($db->select_foreach('SELECT id,steamid,update_fails FROM `steam_data` WHERE `time_data` <= '.time().' LIMIT '.($i*50).','.($pointer*50)) as $user) {
                 conjob::user_update_com($user);
             }
 
@@ -78,7 +78,7 @@ while(true) {
     if($for_count >= 1) {
         $sleep_full = false;
         for ($i = 0; $i < $for_count; $i++) {
-            foreach($db->select_foreach('SELECT id,data_api,steamid,communityid FROM `steam_data` WHERE `time_data_api` <= '.time().' LIMIT '.($i*50).','.($pointer*50)) as $user) {
+            foreach($db->select_foreach('SELECT id,data_api,steamid,communityid,update_fails FROM `steam_data` WHERE `time_data_api` <= '.time().' LIMIT '.($i*50).','.($pointer*50)) as $user) {
                 conjob::user_update_api($user);
             }
 

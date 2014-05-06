@@ -22,5 +22,9 @@ CREATE TABLE IF NOT EXISTS `steam_data` (
   `data_api` mediumblob,
   `time_data` int(20) NOT NULL DEFAULT '0',
   `time_data_api` int(20) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`)
+  `update_fails` int(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `steamid` (`steamid`),
+  KEY `time_data` (`time_data`),
+  KEY `time_data_api` (`time_data_api`)
 ) DEFAULT CHARSET=latin1;
