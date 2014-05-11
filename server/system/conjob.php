@@ -31,13 +31,6 @@ class conjob {
         if(console_print_text)
             echo date("[H:i:s]")." Full update UserID: ".$user['id']."\n";
 
-        if($user['update_fails'] >= 20) {
-            $db->delete("DELETE FROM `steam_data` WHERE `id` = ?",array($user['id']));
-            echo date("[H:i:s]")." To many update fails for UserID: ".$user['id']."\n";
-            echo date("[H:i:s]")." DELETE UserID: ".$user['id']."\n";
-            return false;
-        }
-
         $snoopy->agent = "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)";
         $snoopy->referer = "http://www.hammermaps.de/";
         $snoopy->rawheaders["Pragma"] = "no-cache";
@@ -57,7 +50,7 @@ class conjob {
                 }
             }
 
-            if(array_key_exists('error',$data) || !count($data['players'])) {
+            if(!array_key_exists('players',$data) || array_key_exists('error',$data) || !count($data['players'])) {
                 $db->update("UPDATE `steam_data` SET `time_data_api` = '".(time()+60+rand(1, 5))."', `update_fails` = ".($user['update_fails']+1)." WHERE `id` = ?",array($user['id']));
                 return false;
             }
@@ -73,43 +66,51 @@ class conjob {
     }
 
     // Aktualisieren der Steam API Informationen
-    final static function user_update_api($user=array()) {
+    final static function user_update_api() {
         global $snoopy,$db;
-        if(console_print_text)
-            echo date("[H:i:s]")." Fast update UserID: ".$user['id']."\n";
 
-        if($user['update_fails'] >= 20) {
-            $db->delete("DELETE FROM `steam_data` WHERE `id` = ?",array($user['id']));
-            echo date("[H:i:s]")." To many update fails for UserID: ".$user['id']."\n";
-            echo date("[H:i:s]")." DELETE UserID: ".$user['id']."\n";
-            return false;
+        $users = index::getIndex(); $steamids64 = ''; $userids = '';
+        foreach ($users as $communityid => $data) {
+            $steamids64 .= $communityid.',';
+            $userids .= $data['id'].',';
         }
+        $steamids64 = substr($steamids64, 0, -1);
+        $userids = substr($userids, 0, -1);
+
+        if(console_print_text)
+            echo date("[H:i:s]")." Fast update for UserIDs: ".$userids."\n";
 
         $snoopy->agent = "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)";
         $snoopy->referer = "http://www.hammermaps.de/";
         $snoopy->rawheaders["Pragma"] = "no-cache";
 
-        $send_data_api = array('format' => 'xml', 'key' => steam_api_key, 'steamids' => $user['communityid']);
+        $send_data_api = array('format' => 'xml', 'key' => steam_api_key, 'steamids' => $steamids64);
         if($snoopy->fetch('http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?'.http_build_query($send_data_api))) {
             $data = objectToArray(simplexml_load_string($snoopy->results, 'SimpleXMLElement', LIBXML_NOCDATA));
 
-            if(array_key_exists('error',$data) || !count($data['players'])) {
-                $db->update("UPDATE `steam_data` SET `time_data_api` = '".(time()+30)."', `update_fails` = ".($user['update_fails']+1)." WHERE `id` = ?",array($user['id']));
+            if(array_key_exists('error',$data) || !count($data['players']))
                 return false;
+
+            foreach ($data['players'] as $id ) {
+                foreach ($id as $player ) {
+                    if(!$user = index::get($player['steamid']))
+                        continue;
+
+                    //User im Memcache, aktualisieren
+                    $user_in_mem = Cache::get('user_api_'.$user['steamid']);
+                    if(!empty($user_in_mem) && $user_in_mem ? true : false)
+                        Cache::replace('user_api_'.$user['steamid'], base64_encode(serialize($player)),true,60); //Cache
+
+                    //Datenbank Update
+                    $db->update("UPDATE `steam_data` SET `time_data_api` = '".(time()+60+rand(1, 5))."', `data_api` = ?, `update_fails` = 0 WHERE `id` = ?",array(bin2hex(gzcompress(base64_encode(serialize($player)))),$user['id']));
+                    index::remove($user['communityid']);
+                }
+
+                foreach(index::getIndex() as $communityid => $data) {
+                    $db->update("UPDATE `steam_data` SET `time_data_api` = '".(time()+30)."', `update_fails` = ".($data['update_fails']+1)." WHERE `id` = ?",array($data['id']));
+                    index::remove($communityid);
+                }
             }
-
-            $data = $data['players']['player'];
-
-            //User im Memcache, aktualisieren
-            $user_in_mem = Cache::get('user_api_'.$user['steamid']);
-            if(!empty($user_in_mem) && $user_in_mem ? true : false)
-                Cache::replace('user_api_'.$user['steamid'], base64_encode(serialize($data)),true,60); //Cache
-
-            //Datenbank Update
-            $db->update("UPDATE `steam_data` SET `time_data_api` = '".(time()+60+rand(1, 5))."', `data_api` = ?, `update_fails` = 0 WHERE `id` = ?",array(bin2hex(gzcompress(base64_encode(serialize($data)))),$user['id']));
-        } else {
-            $db->update("UPDATE `steam_data` SET `time_data_api` = '".(time()+30)."', `update_fails` = ".($user['update_fails']+1)." WHERE `id` = ?",array($user['id']));
-            return false;
         }
     }
 }

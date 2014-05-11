@@ -76,3 +76,28 @@ function binary_multiples($size, $praefix=true, $short= true) {
     $size = sprintf("%01.2f", $size) . ' ' . $norm[$x];
     return $size;
 }
+
+class index {
+    private static $index = array();
+
+    public static function add($steamid,$data) {
+        if(!array_key_exists($steamid, self::$index))
+            self::$index[$steamid] = $data;
+    }
+
+    public static function remove($steamid) {
+        if(array_key_exists($steamid, self::$index))
+            unset(self::$index[$steamid]);
+    }
+
+    public static function get($steamid) {
+        if(array_key_exists($steamid, self::$index))
+            return self::$index[$steamid];
+
+        return false;
+    }
+
+    public static function getIndex() {
+        return self::$index;
+    }
+}

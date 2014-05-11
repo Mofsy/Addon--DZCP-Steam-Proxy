@@ -62,7 +62,14 @@ while(true) {
     if($for_count >= 1) {
         $sleep_full = false;
         for ($i = 0; $i < $for_count; $i++) {
-            foreach($db->select_foreach('SELECT id,steamid,update_fails FROM `steam_data` WHERE `time_data` <= '.time().' LIMIT '.($i*50).','.($pointer*50)) as $user) {
+            foreach($db->select_foreach('SELECT id,steamid,update_fails FROM `steam_data` WHERE `time_data` <= '.time().' ORDER BY `id` ASC LIMIT '.($i*50).','.($pointer*50)) as $user) {
+                if($user['update_fails'] >= 20) {
+                    $db->delete("DELETE FROM `steam_data` WHERE `id` = ?",array($user['id']));
+                    echo date("[H:i:s]")." To many update fails for UserID: ".$user['id']."\n";
+                    echo date("[H:i:s]")." DELETE UserID: ".$user['id']."\n";
+                    continue;
+                }
+
                 conjob::user_update_com($user);
             }
 
@@ -78,10 +85,18 @@ while(true) {
     if($for_count >= 1) {
         $sleep_full = false;
         for ($i = 0; $i < $for_count; $i++) {
-            foreach($db->select_foreach('SELECT id,data_api,steamid,communityid,update_fails FROM `steam_data` WHERE `time_data_api` <= '.time().' LIMIT '.($i*50).','.($pointer*50)) as $user) {
-                conjob::user_update_api($user);
+            foreach($db->select_foreach('SELECT id,data_api,steamid,communityid,update_fails FROM `steam_data` WHERE `time_data_api` <= '.time().' ORDER BY `id` ASC LIMIT '.($i*50).','.($pointer*50)) as $user) {
+                if($user['update_fails'] >= 20) {
+                    $db->delete("DELETE FROM `steam_data` WHERE `id` = ?",array($user['id']));
+                    echo date("[H:i:s]")." To many update fails for UserID: ".$user['id']."\n";
+                    echo date("[H:i:s]")." DELETE UserID: ".$user['id']."\n";
+                    continue;
+                }
+
+                index::add($user['communityid'],$user);
             }
 
+            conjob::user_update_api();
             $pointer++;
         }
     }
